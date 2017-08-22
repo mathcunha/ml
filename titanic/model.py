@@ -41,7 +41,7 @@ cat_pipeline_emb = Pipeline([
 	
 full_pipeline = FeatureUnion(transformer_list=[
         ("num_pipeline", num_pipeline),
-        ("cat_pipeline_emb", cat_pipeline_emb),
+        #("cat_pipeline_emb", cat_pipeline_emb),
         ("cat_pipeline", cat_pipeline),
     ])
 
@@ -63,6 +63,19 @@ from sklearn.linear_model import SGDClassifier
 sgd_clf = SGDClassifier(random_state=42)
 sgd_clf.fit(train_prepared, labels)
 
+
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(sgd_clf, train_prepared, labels,
+                         scoring="accuracy", cv=10)
+sgdc_accuracy_scores = scores
+
+def display_scores(scores):
+    print("Scores:", scores)
+    print("Mean:", scores.mean())
+    print("Standard deviation:", scores.std())
+
+
 test = pd.read_csv("test.csv")
 test.drop("Cabin", axis = 1, inplace = True)
 test.drop("Ticket", axis = 1, inplace = True)
@@ -80,6 +93,9 @@ train = pd.read_csv("train_complete.csv", index_col=0)
 passengers = train["PassengerId"]
 
 out = sgd_clf.predict(train_prepared)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(labels, out)
 
 for idx, val in enumerate(passengers):
     print(val, out[idx], sep=",")
