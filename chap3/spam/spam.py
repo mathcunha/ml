@@ -4,6 +4,7 @@ import codecs
 import array
 import random
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -16,10 +17,17 @@ from os import listdir
 from nltk.tokenize import word_tokenize
 from nltk.tokenize import TweetTokenizer
 
-columns = ['name','type', 'spam','path', 'tokens','array']
+columns = ['ptr_name','ptr_type', 'ptr_spam','ptr_path', 'ptr_tokens']
 tknzr = TweetTokenizer(strip_handles=True, reduce_len=True, preserve_case=False)
 
 dictionary = list()
+
+def save_fig(fig_id, tight_layout=True):
+    path =  fig_id + ".png"
+    print("Saving figure", fig_id)
+    if tight_layout:
+        plt.tight_layout()
+    plt.savefig(path, format='png', dpi=300)
 
 def loadTokens(filePath):
     with codecs.open(filePath, 'r',encoding='utf-8', errors='ignore') as infile:
@@ -38,19 +46,31 @@ def loadEmailData(directory, spam=1):
     email = pd.DataFrame(columns=columns)
     for f in listdir('dataset/'+directory):
         filePath = 'dataset/'+directory+'/'+f
-        email = pd.concat([pd.DataFrame([[f, directory, spam, filePath , loadTokens(filePath) , None]], columns=columns), email])
+        email = pd.concat([pd.DataFrame([[f, directory, spam, filePath , loadTokens(filePath)]], columns=columns), email])
     return email
 
 data = pd.concat([loadEmailData('easy_ham', 0), loadEmailData('easy_ham_2', 0), loadEmailData('hard_ham', 0), loadEmailData('spam', 1), loadEmailData('spam_2', 0)])
 #data = pd.concat([loadEmailData('xingar', 1), loadEmailData('nomes', 0)])
-data['id'] = range(1, len(data) + 1)
+data['id'] = range(0, len(data), 1)
 data.set_index(['id'], inplace=True)
 data.reset_index()
 
 dictionary = list(set(dictionary))
 
-random.seed(42)
-random.shuffle(dictionary)
+for col in columns:
+    if dictionary.count(col) > 0:
+        dictionary.remove(col)
+
+if dictionary.count('id') > 0:
+    dictionary.remove('id')
+
+if dictionary.count('fit') > 0:
+    dictionary.remove('fit')
+
+#https://stackoverflow.com/questions/39745807/typeerror-expected-sequence-or-array-like-got-estimator
+
+#random.seed(42)
+#random.shuffle(dictionary)
 
 #bkp_dictionary = list(dictionary)
 #dictionary = bkp_dictionary[73000:]#just for my laptop
@@ -64,17 +84,20 @@ def createTokenArray(tokens):
 for word in dictionary:
     def countTokens(tokens):
         return tokens.count(word)
-    data[word] = data['tokens'].apply(countTokens)
+    data[word] = data['ptr_tokens'].apply(countTokens)
 
+
+#data.drop("ptr_tokens", axis = 1, inplace = True)
+#data.to_csv('data.csv', sep=',', encoding='utf-8')
 #data['tok_array'] = data['tokens'].apply(createTokenArray)
 
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in split.split(data, data["type"]):
+for train_index, test_index in split.split(data, data["ptr_type"]):
     strat_train_set = data.loc[train_index]
     strat_test_set = data.loc[test_index]
 
 def type_proportions(data):
-    return data["type"].value_counts() / len(data)
+    return data["ptr_type"].value_counts() / len(data)
 
 compare_props = pd.DataFrame({
     "Overall": type_proportions(data),
@@ -102,7 +125,7 @@ full_pipeline = FeatureUnion(transformer_list=[
         ("cat_pipeline", cat_pipeline),
     ])
 
-labels = strat_train_set["spam"]
+labels = strat_train_set["ptr_spam"]
 train_prepared = full_pipeline.fit_transform(strat_train_set)
 
 sgd_clf = SGDClassifier(random_state=42)
@@ -115,8 +138,7 @@ def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
     plt.legend(loc="upper left", fontsize=16)
     plt.ylim([0, 1])
 
-plt.figure(figsize=(8, 4))
+precisions, recalls, thresholds = precision_recall_curve(labels, y_scores)
 plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
 
-plt.show()
-
+save_fig('modelo')
