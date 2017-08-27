@@ -17,7 +17,7 @@ from os import listdir
 from nltk.tokenize import word_tokenize
 from nltk.tokenize import TweetTokenizer
 
-columns = ['ptr_name','ptr_type', 'ptr_spam','ptr_path', 'ptr_tokens']
+columns = ['name','type', 'spam','path', 'tokens']
 tknzr = TweetTokenizer(strip_handles=True, reduce_len=True, preserve_case=False)
 
 dictionary = list()
@@ -58,16 +58,6 @@ data.reset_index()
 
 dictionary = list(set(dictionary))
 
-for col in columns:
-    if dictionary.count(col) > 0:
-        dictionary.remove(col)
-
-if dictionary.count('id') > 0:
-    dictionary.remove('id')
-
-if dictionary.count('fit') > 0:
-    dictionary.remove('fit')
-
 #https://stackoverflow.com/question74310s/39745807/typeerror-expected-sequence-or-array-like-got-estimator
 
 #random.seed(42)
@@ -80,29 +70,31 @@ def createTokenArray(tokens):
     item = list()
     for word in dictionary:
         item.append(tokens.count(word))
-    item = np.array(item)
+    #item = np.array(item)
     return item
 
 #for word in dictionary:
 #    def countTokens(tokens):
 #        return tokens.count(word)
-#    data[word] = data['ptr_tokens'].apply(countTokens)
+#    data[word] = data['tokens'].apply(countTokens)
 
 
-#data.drop("ptr_tokens", axis = 1, inplace = True)
+#data.drop("tokens", axis = 1, inplace = True)
 print('counting tokens by file')
-data['tok_array'] = data['ptr_tokens'].apply(createTokenArray)
+data['tok_array'] = data['tokens'].apply(createTokenArray)
 
 print('saving data')
 data.to_csv('data.csv', sep=',', encoding='utf-8')
 
+data.drop("tokens", axis = 1, inplace = True)
+
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in split.split(data, data["ptr_type"]):
+for train_index, test_index in split.split(data, data["type"]):
     strat_train_set = data.loc[train_index]
     strat_test_set = data.loc[test_index]
 
 def type_proportions(data):
-    return data["ptr_type"].value_counts() / len(data)
+    return data["type"].value_counts() / len(data)
 
 compare_props = pd.DataFrame({
     "Overall": type_proportions(data),
@@ -130,7 +122,7 @@ full_pipeline = FeatureUnion(transformer_list=[
         ("cat_pipeline", cat_pipeline),
     ])
 
-labels = strat_train_set["ptr_spam"]
+labels = strat_train_set["spam"]
 #train_prepared = full_pipeline.fit_transform(strat_train_set)
 train_prepared = np.array(strat_train_set['tok_array'].tolist())
 
@@ -150,3 +142,5 @@ precisions, recalls, thresholds = precision_recall_curve(labels, y_scores)
 plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
 
 save_fig('modelo')
+
+exit()
