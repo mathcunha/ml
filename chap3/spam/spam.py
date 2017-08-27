@@ -60,11 +60,11 @@ dictionary = list(set(dictionary))
 
 #https://stackoverflow.com/question74310s/39745807/typeerror-expected-sequence-or-array-like-got-estimator
 
-#random.seed(42)
-#random.shuffle(dictionary)
+random.seed(42)
+random.shuffle(dictionary)
 
-#bkp_dictionary = list(dictionary)
-#dictionary = bkp_dictionary[73000:]#just for my laptop
+bkp_dictionary = list(dictionary)
+dictionary = bkp_dictionary[40000:]#just for my laptop
 
 def createTokenArray(tokens):
     item = list()
@@ -135,7 +135,7 @@ def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
     plt.plot(thresholds, precisions[:-1], "b--", label="Precision", linewidth=2)
     plt.plot(thresholds, recalls[:-1], "g-", label="Recall", linewidth=2)
     plt.xlabel("Threshold", fontsize=16)
-    plt.legend(loc="upper left", fontsize=16)
+    plt.legend(loc="upper right", fontsize=16)
     plt.ylim([0, 1])
 
 precisions, recalls, thresholds = precision_recall_curve(labels, y_scores)
