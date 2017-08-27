@@ -49,6 +49,7 @@ def loadEmailData(directory, spam=1):
         email = pd.concat([pd.DataFrame([[f, directory, spam, filePath , loadTokens(filePath)]], columns=columns), email])
     return email
 
+print('loading email files')
 data = pd.concat([loadEmailData('easy_ham', 0), loadEmailData('easy_ham_2', 0), loadEmailData('hard_ham', 0), loadEmailData('spam', 1), loadEmailData('spam_2', 0)])
 #data = pd.concat([loadEmailData('xingar', 1), loadEmailData('nomes', 0)])
 data['id'] = range(0, len(data), 1)
@@ -67,7 +68,7 @@ if dictionary.count('id') > 0:
 if dictionary.count('fit') > 0:
     dictionary.remove('fit')
 
-#https://stackoverflow.com/questions/39745807/typeerror-expected-sequence-or-array-like-got-estimator
+#https://stackoverflow.com/question74310s/39745807/typeerror-expected-sequence-or-array-like-got-estimator
 
 #random.seed(42)
 #random.shuffle(dictionary)
@@ -79,17 +80,21 @@ def createTokenArray(tokens):
     item = list()
     for word in dictionary:
         item.append(tokens.count(word))
+    item = np.array(item)
     return item
 
-for word in dictionary:
-    def countTokens(tokens):
-        return tokens.count(word)
-    data[word] = data['ptr_tokens'].apply(countTokens)
+#for word in dictionary:
+#    def countTokens(tokens):
+#        return tokens.count(word)
+#    data[word] = data['ptr_tokens'].apply(countTokens)
 
 
 #data.drop("ptr_tokens", axis = 1, inplace = True)
-#data.to_csv('data.csv', sep=',', encoding='utf-8')
-#data['tok_array'] = data['tokens'].apply(createTokenArray)
+print('counting tokens by file')
+data['tok_array'] = data['ptr_tokens'].apply(createTokenArray)
+
+print('saving data')
+data.to_csv('data.csv', sep=',', encoding='utf-8')
 
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 for train_index, test_index in split.split(data, data["ptr_type"]):
@@ -126,9 +131,12 @@ full_pipeline = FeatureUnion(transformer_list=[
     ])
 
 labels = strat_train_set["ptr_spam"]
-train_prepared = full_pipeline.fit_transform(strat_train_set)
+#train_prepared = full_pipeline.fit_transform(strat_train_set)
+train_prepared = np.array(strat_train_set['tok_array'].tolist())
 
 sgd_clf = SGDClassifier(random_state=42)
+
+print('training model')
 y_scores = cross_val_predict(sgd_clf, train_prepared, labels, cv=3, method="decision_function")
 
 def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
