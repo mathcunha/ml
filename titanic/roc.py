@@ -9,6 +9,8 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import cross_val_predict
+from sklearn.metrics import precision_recall_curve, precision_score, recall_score
 
 plt.rcParams['axes.labelsize'] = 14
 plt.rcParams['xtick.labelsize'] = 12
@@ -53,28 +55,22 @@ full_pipeline = FeatureUnion(transformer_list=[
 
 
 #train = pd.read_csv("train.csv")
+#train_set = pd.read_csv("train.csv", index_col = "PassengerId")
 train = pd.read_csv("train_complete.csv", index_col=0)
 labels = train["Survived"]
 
-
-train.drop("PassengerId", axis = 1, inplace = True)
-train.drop("Cabin", axis = 1, inplace = True)
-train.drop("Survived", axis = 1, inplace = True)
-train.drop("Ticket", axis = 1, inplace = True)
-train.drop("Name", axis = 1, inplace = True)
+train.drop(["Name","Ticket","Survived","Cabin","PassengerId"], axis = 1, inplace = True)
 
 train_prepared = full_pipeline.fit_transform(train)
 
 from sklearn.linear_model import SGDClassifier
 sgd_clf = SGDClassifier(random_state=42)
+sgd_clf.fit(train_prepared, labels)
 
-from sklearn.model_selection import cross_val_predict
 
 #y_train_pred = cross_val_predict(sgd_clf, X_train, y_train_5, cv=4)
 
 y_scores = cross_val_predict(sgd_clf, train_prepared, labels, cv=3, method="decision_function")
-
-from sklearn.metrics import precision_recall_curve
 
 precisions, recalls, thresholds = precision_recall_curve(labels, y_scores)
 
@@ -85,14 +81,13 @@ def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
     plt.legend(loc="upper left", fontsize=16)
     plt.ylim([0, 1])
 
-
 plt.figure(figsize=(8, 4))
 plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
 
 plt.show()
 
-precision_score(labels, y_scores > 70000)
-recall_score(labels, y_scores > 70000)
+precision_score(labels, y_scores > 0)
+recall_score(labels, y_scores > 0)
 
 def plot_precision_vs_recall(precisions, recalls):
     plt.plot(recalls, precisions, "b-", linewidth=2)
